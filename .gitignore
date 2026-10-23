@@ -1,0 +1,18 @@
+# Local configuration and virtual environment
+.env
+.venv/
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs and local runtime files
+*.log
+instance/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
