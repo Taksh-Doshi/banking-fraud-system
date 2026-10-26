@@ -8,12 +8,19 @@
 CREATE DATABASE IF NOT EXISTS banking_fraud_db;
 USE banking_fraud_db;
 
+DROP TABLE IF EXISTS TRANSACTION_AUDIT;
+DROP TABLE IF EXISTS INVESTIGATION;
+DROP TABLE IF EXISTS FRAUD_FLAG;
+DROP TABLE IF EXISTS BANK_TRANSACTION;
+DROP TABLE IF EXISTS STAFF;
+DROP TABLE IF EXISTS CUSTOMER_ACCOUNT;
+
 -- ============================================================
 -- 1. CUSTOMER_ACCOUNT
 -- Stores customer details and their account/holder information.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS CUSTOMER_ACCOUNT (
+CREATE TABLE CUSTOMER_ACCOUNT (
     customer_account_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     customer_id VARCHAR(30) NOT NULL,
     full_name VARCHAR(120) NOT NULL,
@@ -21,6 +28,7 @@ CREATE TABLE IF NOT EXISTS CUSTOMER_ACCOUNT (
     email VARCHAR(150),
     phone VARCHAR(20),
     address VARCHAR(255),
+    password_hash VARCHAR(255) NOT NULL,
 
     account_number VARCHAR(30) NOT NULL,
     account_type VARCHAR(30) NOT NULL,
@@ -31,6 +39,8 @@ CREATE TABLE IF NOT EXISTS CUSTOMER_ACCOUNT (
     holder_role VARCHAR(30) NOT NULL DEFAULT 'PRIMARY',
     start_date DATE,
     end_date DATE,
+
+    CONSTRAINT uq_account_number UNIQUE (account_number),
 
     CONSTRAINT chk_account_balance
         CHECK (balance >= 0),
@@ -48,7 +58,6 @@ CREATE TABLE IF NOT EXISTS CUSTOMER_ACCOUNT (
                OR end_date >= start_date),
 
     INDEX idx_customer_id (customer_id),
-    INDEX idx_account_number (account_number),
     INDEX idx_account_status (account_status)
 ) ENGINE=InnoDB;
 
@@ -58,12 +67,17 @@ CREATE TABLE IF NOT EXISTS CUSTOMER_ACCOUNT (
 -- Stores bank staff who manage fraud flags and investigations.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS STAFF (
+CREATE TABLE STAFF (
     staff_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     staff_name VARCHAR(120) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(40) NOT NULL,
     staff_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+
+    CONSTRAINT chk_staff_role
+        CHECK (role IN
+            ('ANALYST', 'INVESTIGATOR', 'MANAGER', 'ADMIN')),
 
     CONSTRAINT chk_staff_status
         CHECK (staff_status IN ('ACTIVE', 'INACTIVE'))
@@ -76,7 +90,7 @@ CREATE TABLE IF NOT EXISTS STAFF (
 -- ============================================================
 
 
-CREATE TABLE IF NOT EXISTS BANK_TRANSACTION (
+CREATE TABLE BANK_TRANSACTION (
     transaction_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     transaction_type VARCHAR(20) NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
@@ -127,8 +141,8 @@ CREATE TABLE IF NOT EXISTS BANK_TRANSACTION (
 
     INDEX idx_transaction_time (transaction_time),
     INDEX idx_transaction_status (transaction_status),
-    INDEX idx_transaction_from (from_account_id),
-    INDEX idx_transaction_to (to_account_id)
+    INDEX idx_txn_from_time (from_account_id, transaction_time),
+    INDEX idx_txn_to_time (to_account_id, transaction_time)
 ) ENGINE=InnoDB;
 
 
@@ -139,7 +153,7 @@ CREATE TABLE IF NOT EXISTS BANK_TRANSACTION (
 -- reported manually. A flag is an alert, not proof of fraud.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS FRAUD_FLAG (
+CREATE TABLE FRAUD_FLAG (
     flag_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     transaction_id BIGINT NOT NULL,
 
@@ -166,11 +180,21 @@ CREATE TABLE IF NOT EXISTS FRAUD_FLAG (
     CONSTRAINT fk_flag_created_by
         FOREIGN KEY (created_by_staff_id)
         REFERENCES STAFF(staff_id)
-        ON UPDATE CASCADE
+        -- RESTRICT avoids MySQL error 3823 for CHECK-constrained FK columns.
+        ON UPDATE RESTRICT
         ON DELETE RESTRICT,
+
+    CONSTRAINT uq_flag_txn_rule UNIQUE (transaction_id, rule_id),
 
     CONSTRAINT chk_flag_source
         CHECK (flag_source IN ('AUTOMATIC', 'MANUAL')),
+
+    CONSTRAINT chk_flag_source_creator
+        CHECK (
+            (flag_source = 'MANUAL' AND created_by_staff_id IS NOT NULL)
+            OR
+            (flag_source = 'AUTOMATIC' AND created_by_staff_id IS NULL)
+        ),
 
     CONSTRAINT chk_flag_severity
         CHECK (severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
@@ -180,7 +204,6 @@ CREATE TABLE IF NOT EXISTS FRAUD_FLAG (
             ('OPEN', 'UNDER_INVESTIGATION', 'CONFIRMED',
              'FALSE_POSITIVE', 'CLOSED')),
 
-    INDEX idx_flag_transaction (transaction_id),
     INDEX idx_flag_status_severity (flag_status, severity),
     INDEX idx_flagged_at (flagged_at)
 ) ENGINE=InnoDB;
@@ -191,7 +214,7 @@ CREATE TABLE IF NOT EXISTS FRAUD_FLAG (
 -- Stores staff assignments, findings and investigation outcomes.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS INVESTIGATION (
+CREATE TABLE INVESTIGATION (
     investigation_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     flag_id BIGINT NOT NULL,
     assigned_staff_id BIGINT,
@@ -222,6 +245,16 @@ CREATE TABLE IF NOT EXISTS INVESTIGATION (
     CONSTRAINT chk_investigation_dates
         CHECK (resolved_at IS NULL OR resolved_at >= opened_at),
 
+    CONSTRAINT chk_investigation_outcome
+        CHECK (outcome IS NULL OR
+            outcome IN ('CONFIRMED_FRAUD', 'LEGITIMATE', 'INCONCLUSIVE')),
+
+    CONSTRAINT chk_investigation_closed
+        CHECK (
+            investigation_status NOT IN ('RESOLVED', 'CLOSED')
+            OR (outcome IS NOT NULL AND resolved_at IS NOT NULL)
+        ),
+
     INDEX idx_investigation_flag (flag_id),
     INDEX idx_investigation_staff (assigned_staff_id),
     INDEX idx_investigation_status (investigation_status)
@@ -233,7 +266,7 @@ CREATE TABLE IF NOT EXISTS INVESTIGATION (
 -- Records important transaction-related actions for traceability.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS TRANSACTION_AUDIT (
+CREATE TABLE TRANSACTION_AUDIT (
     audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     transaction_id BIGINT NOT NULL,
     staff_id BIGINT,

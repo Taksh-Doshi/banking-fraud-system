@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge %}
+{% block title %}Transaction receipt | SecureBank{% endblock %}
+{% block page_title %}Transaction receipt{% endblock %}
+{% block page_subtitle %}A customer-safe view of your transaction.{% endblock %}
+{% block content %}
+<section class="card form-card receipt-card">
+    <div class="card-title-row"><div><h2>{{ transaction.transaction_type|title }}</h2><p>{{ transaction.reference_number }}</p></div>{{ badge('Under review','neutral') if transaction.transaction_status == 'UNDER_REVIEW' else badge(transaction.transaction_status) }}</div>
+    <dl class="detail-grid">
+        <div><dt>Amount</dt><dd>{{ transaction.amount|inr }}</dd></div>
+        <div><dt>Transaction time</dt><dd>{{ transaction.transaction_time }}</dd></div>
+        <div><dt>From account</dt><dd>{{ transaction.from_account_number or '—' }}</dd></div>
+        <div><dt>To account</dt><dd>{{ transaction.to_account_number or '—' }}</dd></div>
+        <div><dt>Reference</dt><dd>{{ transaction.reference_number }}</dd></div>
+        <div><dt>Status</dt><dd>{{ 'Under review' if transaction.transaction_status == 'UNDER_REVIEW' else transaction.transaction_status|replace('_',' ')|title }}</dd></div>
+    </dl>
+    {% if transaction.transaction_status == 'UNDER_REVIEW' %}<p class="info-callout">This transaction is under review. Internal review information is not displayed here.</p>{% endif %}
+    <a class="btn btn-secondary" href="{{ url_for('transaction_history') }}">Back to transaction history</a>
+</section>
+{% endblock %}

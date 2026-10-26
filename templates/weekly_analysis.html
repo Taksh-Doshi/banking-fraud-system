@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Weekly analysis | SecureBank{% endblock %}
+{% block page_title %}Weekly analysis{% endblock %}
+{% block page_subtitle %}Re-evaluate transaction activity from the past seven days.{% endblock %}
+{% block content %}
+<section class="card form-card">
+    <h2>Run database analysis</h2>
+    <p>The stored procedure reevaluates recent transactions; dedupe rules prevent duplicate flags.</p>
+    <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary" type="submit">Run weekly analysis</button></form>
+    {% if new_flags is not none %}<p class="info-callout">New flags created: <strong>{{ new_flags }}</strong></p>{% endif %}
+</section>
+<section class="card flags-card"><div class="card-title-row"><div><h2>Recently created flags</h2><p>New activity produced by the analysis.</p></div></div>
+{% if flags %}<div class="table-wrap"><table><thead><tr><th>Flagged</th><th>Rule</th><th>Reference</th><th>Amount</th><th>Severity</th><th>Status</th><th></th></tr></thead><tbody>
+{% for flag in flags %}<tr><td>{{ flag.flagged_at }}</td><td>{{ flag.rule_name }} ({{ flag.rule_id or 'manual' }})</td><td>{{ flag.reference_number }}</td><td>{{ flag.amount|inr }}</td><td>{{ badge(flag.severity) }}</td><td>{{ badge(flag.flag_status) }}</td><td><a class="row-action" href="{{ url_for('staff_flag_detail', flag_id=flag.flag_id) }}">Details</a></td></tr>{% endfor %}
+</tbody></table></div>{% else %}{{ empty_state('No recent flags', 'Run analysis or check back after transaction activity.') }}{% endif %}
+</section>
+{% endblock %}

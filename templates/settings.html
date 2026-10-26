@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Settings | SecureBank{% endblock %}
+{% block page_title %}{{ 'Staff settings' if staff_settings else 'Profile & settings' }}{% endblock %}
+{% block page_subtitle %}Manage your account details and password.{% endblock %}
+{% block content %}
+<div class="settings-layout">
+    <aside class="card settings-nav"><div class="profile-large"><span class="avatar">{{ (current_user.staff_name if staff_settings else current_user.full_name)[:1] }}</span><strong>{{ current_user.staff_name if staff_settings else current_user.full_name }}</strong><span>{{ current_user.role if staff_settings else current_user.customer_id }}</span></div><nav><a class="active" href="#profile-form">{{ icon('user') }} Profile</a><a href="#password-form">{{ icon('lock') }} Password</a></nav></aside>
+    <div class="settings-main">
+        {% if not staff_settings %}
+        <section class="card">
+            <div class="settings-section-title"><div><h2>Personal information</h2><p>Contact details are attached to your customer accounts.</p></div></div>
+            <form class="transaction-form" id="profile-form" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="profile">
+                <label class="field"><span>Email</span><span class="input-wrap"><input type="email" name="email" value="{{ current_user.email or '' }}"></span></label>
+                <label class="field"><span>Phone</span><span class="input-wrap"><input name="phone" value="{{ current_user.phone or '' }}"></span></label>
+                <label class="field"><span>Address</span><span class="input-wrap"><textarea name="address" rows="3">{{ current_user.address or '' }}</textarea></span></label>
+                <button class="btn btn-primary" type="submit">Save profile</button>
+            </form>
+        </section>
+        {% endif %}
+        <section class="card">
+            <div class="settings-section-title"><div><h2>Password & security</h2><p>Confirm your current password to set a new one.</p></div></div>
+            <form class="transaction-form" id="password-form" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="password">
+                <label class="field"><span>Current password</span><span class="input-wrap">{{ icon('lock') }}<input type="password" name="current_password" autocomplete="current-password" required></span></label>
+                <label class="field"><span>New password</span><span class="input-wrap">{{ icon('lock') }}<input type="password" name="new_password" autocomplete="new-password" minlength="10" required></span></label>
+                <button class="btn btn-primary" type="submit">Change password</button>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}

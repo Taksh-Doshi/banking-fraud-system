@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Create manual flag | SecureBank{% endblock %}
+{% block page_title %}Create manual flag{% endblock %}
+{% block page_subtitle %}Add a staff-reviewed flag to an existing transaction.{% endblock %}
+{% block content %}
+<section class="card form-card">
+    <form class="transaction-form" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="field"><span>Transaction reference</span><span class="input-wrap">{{ icon('search') }}<input name="reference_number" required placeholder="Enter exact transaction reference"></span></label>
+        <label class="field"><span>Severity</span><span class="select-wrap"><select name="severity" required><option value="">Choose severity</option>{% for value in ['LOW','MEDIUM','HIGH','CRITICAL'] %}<option value="{{ value }}">{{ value|title }}</option>{% endfor %}</select></span></label>
+        <label class="field"><span>Reason</span><span class="input-wrap"><textarea name="reason" required minlength="5" rows="4" placeholder="Explain why this transaction needs review"></textarea></span></label>
+        <div class="info-callout">Manual flags are recorded with your staff identity and may be linked to an investigation.</div>
+        <button class="btn btn-primary" type="submit">Create manual flag</button>
+    </form>
+</section>
+{% endblock %}

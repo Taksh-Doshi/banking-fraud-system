@@ -1,0 +1,10 @@
+{
+  "description": "Manage banking transactions and monitor fraud with a secure platform designed for customers and bank staff, ensuring safer financial interactions.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

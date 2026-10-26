@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_components.html" import empty_state %}
+{% block title %}Reports | SecureBank{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_subtitle %}Read-only report queries defined in sql/reports.sql.{% endblock %}
+{% block content %}
+<section class="card flags-card">
+    <form class="filters" method="get">
+        <label class="field"><span>Report</span><span class="select-wrap"><select name="report" onchange="this.form.submit()">{% for report in reports %}<option value="{{ report.key }}" {{ 'selected' if selected and selected.key == report.key else '' }}>{{ report.title }}</option>{% endfor %}</select></span></label>
+        <button class="btn btn-primary" type="submit">Run report</button>
+    </form>
+    {% if selected %}
+    <div class="card-title-row"><div><h2>{{ selected.title }}</h2><p>{{ selected.description }}</p></div></div>
+    {% if rows %}
+    <div class="table-wrap"><table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key|replace('_',' ')|title }}</th>{% endfor %}</tr></thead><tbody>
+    {% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value if value is not none else '—' }}</td>{% endfor %}</tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state('No report rows', 'This query returned no records for the current database state.') }}{% endif %}
+    {% else %}{{ empty_state('No reports configured') }}{% endif %}
+</section>
+{% endblock %}

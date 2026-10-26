@@ -1,11 +1,37 @@
 {% extends "base.html" %}
-
-{% block title %}Home | Banking Fraud Management{% endblock %}
-
-{% block content %}
-<section class="welcome-card">
-    <p class="eyebrow">Project scaffold</p>
-    <h1>Banking Transaction &amp; Fraud Flag Management System</h1>
-    <p>This page is ready for future application content.</p>
-</section>
+{% from "_icons.html" import icon %}
+{% block title %}SecureBank | Safer transactions{% endblock %}
+{% block public_content %}
+<div class="landing">
+    <header class="landing-nav">
+        <a class="logo" href="{{ url_for('index') }}"><span class="logo-mark">{{ icon('shield', 34) }}</span><span class="logo-copy"><strong>Secure<b>Bank</b></strong><small>Safer transactions. Stronger tomorrow.</small></span></a>
+        <nav aria-label="Main"><a href="#features">Protection</a><a href="#about">About</a></nav>
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Sign in</a>
+    </header>
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <span class="badge badge-info">{{ icon('shield', 14) }} Secure by design</span>
+                <h1>Your money.<br><span>Our priority.</span></h1>
+                <p>Manage everyday transactions with clear account information and thoughtful fraud monitoring.</p>
+                <div class="hero-actions"><a class="btn btn-primary" href="{{ url_for('login') }}">Get started {{ icon('check') }}</a><a class="btn btn-secondary" href="#features">Explore protection</a></div>
+                <div class="trust-row"><span class="security-box">{{ icon('lock') }} Protected account access</span></div>
+            </div>
+            <div class="hero-visual" aria-label="Account security illustration">
+                <div class="secure-card"><div class="card-top">{{ icon('shield', 28) }}<span>SECURE ACCOUNT</span></div><div class="chip"></div><strong>•••• &nbsp; •••• &nbsp; ••••</strong><div class="card-foot"><span>TRANSACTION MONITORING</span><b>{{ icon('check') }} ACTIVE</b></div></div>
+                <div class="floating-panel panel-safe">{{ icon('shield') }}<span><strong>Fraud monitoring</strong><small>Activity reviewed in the database</small></span></div>
+            </div>
+        </section>
+        <section class="features" id="features">
+            <div class="section-heading"><span>BUILT FOR PEACE OF MIND</span><h2>Banking with clarity and care</h2><p>Track account activity, review transaction history, and investigate unusual activity.</p></div>
+            <div class="feature-grid">
+                <article class="card"><div class="feature-icon">{{ icon('swap') }}</div><h3>Everyday transactions</h3><p>Deposit, withdraw, and transfer from your active account.</p></article>
+                <article class="card"><div class="feature-icon">{{ icon('shield') }}</div><h3>Fraud monitoring</h3><p>Database rules flag unusual patterns for staff investigation.</p></article>
+                <article class="card"><div class="feature-icon">{{ icon('file') }}</div><h3>Audit history</h3><p>Review transaction and case activity recorded by the database.</p></article>
+            </div>
+        </section>
+        <section class="features" id="about"><div class="section-heading"><span>DEMONSTRATION PROJECT</span><h2>SecureBank</h2><p>A database-first banking fraud management system for demonstration. No real funds are moved.</p></div></section>
+    </main>
+    <footer><a class="logo" href="{{ url_for('index') }}">Secure<b>Bank</b></a><span>Database-backed demonstration system.</span><a href="{{ url_for('login') }}">Customer and staff sign in</a></footer>
+</div>
 {% endblock %}

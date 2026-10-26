@@ -1,10 +1,30 @@
 {% extends "base.html" %}
-
-{% block title %}Staff Dashboard | Banking Fraud Management{% endblock %}
-
+{% from "_icons.html" import icon %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Operations dashboard | SecureBank{% endblock %}
+{% block page_title %}Operations dashboard{% endblock %}
+{% block page_subtitle %}Database-backed fraud and investigation activity.{% endblock %}
 {% block content %}
-<section class="content-card">
-    <h1>Staff Dashboard</h1>
-    <p>Staff dashboard placeholder.</p>
+<div class="alert-strip"><div>{{ icon('shield') }}<span>Monitoring status</span><strong>Database-connected</strong></div><span>{{ current_user.role|title }} access</span></div>
+<section class="kpi-grid">
+    <article class="card kpi"><span class="kpi-icon critical">{{ icon('alert') }}</span><div><span>Critical open flags</span><strong>{{ metrics.critical_flags }}</strong></div></article>
+    <article class="card kpi"><span class="kpi-icon danger">{{ icon('alert') }}</span><div><span>High open flags</span><strong>{{ metrics.high_flags }}</strong></div></article>
+    <article class="card kpi"><span class="kpi-icon warning">{{ icon('clock') }}</span><div><span>Transactions under review</span><strong>{{ metrics.under_review }}</strong></div></article>
+    <article class="card kpi"><span class="kpi-icon success">{{ icon('search') }}</span><div><span>Open investigations</span><strong>{{ metrics.open_investigations }}</strong></div></article>
+</section>
+<section class="staff-charts">
+    <article class="card trend-card"><div class="card-title-row"><div><h2>Queue overview</h2><p>Current fraud flag counts by severity.</p></div></div>
+        <div class="chart-kpis"><div><strong>{{ metrics.todays_transactions }}</strong><span>Transactions today</span></div><div><strong>{{ metrics.medium_flags }}</strong><span>Medium open flags</span></div><div><strong>{{ metrics.low_flags }}</strong><span>Low open flags</span></div></div>
+        <a class="btn btn-secondary" href="{{ url_for('staff_flags') }}">Review flags</a>
+    </article>
+    <article class="card risk-card"><div class="card-title-row"><div><h2>Investigation workflow</h2><p>Review and document evidence.</p></div></div><a class="btn btn-primary full-btn" href="{{ url_for('staff_investigations') }}">Open investigations</a></article>
+</section>
+<section class="card flags-card">
+    <div class="card-title-row"><div><h2>Latest flags</h2><p>Recent records from v_flag_detail.</p></div><a href="{{ url_for('staff_flags') }}">View all</a></div>
+    {% if flags %}
+    <div class="table-wrap"><table><thead><tr><th>Flagged</th><th>Rule</th><th>Transaction</th><th>Amount</th><th>Severity</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for flag in flags %}<tr><td>{{ flag.flagged_at }}</td><td><strong>{{ flag.rule_name }}</strong><small>{{ flag.rule_id or 'Manual' }}</small></td><td>{{ flag.reference_number }}</td><td>{{ flag.amount|inr }}</td><td>{{ badge(flag.severity) }}</td><td>{{ badge(flag.flag_status) }}</td><td><a class="row-action" href="{{ url_for('staff_flag_detail', flag_id=flag.flag_id) }}">Review</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state('No flags yet', 'New flags will be listed here when database rules detect activity.') }}{% endif %}
 </section>
 {% endblock %}

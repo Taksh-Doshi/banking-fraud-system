@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ code }} | SecureBank{% endblock %}
+{% block content %}
+<section class="card error-card"><span class="feature-icon">{{ icon('alert', 28) }}</span><p class="eyebrow">Request could not be completed</p><h1>{{ code }}</h1><p>{{ message }}</p><a class="btn btn-primary" href="{{ url_for('index') }}">Return home</a></section>
+{% endblock %}
+{% block public_content %}
+<main class="error-page">
+    <section class="card error-card"><span class="feature-icon">{{ icon('alert', 28) }}</span><p class="eyebrow">Request could not be completed</p><h1>{{ code }}</h1><p>{{ message }}</p><a class="btn btn-primary" href="{{ url_for('index') }}">Return home</a></section>
+</main>
+{% endblock %}

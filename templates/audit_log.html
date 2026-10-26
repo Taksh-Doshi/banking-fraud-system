@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Audit log | SecureBank{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+{% block page_subtitle %}Trace transaction, staff, and investigation actions recorded in MySQL.{% endblock %}
+{% block content %}
+<section class="card audit-card">
+    <form class="filters" method="get">
+        <label class="field"><span>Transaction reference</span><span class="input-wrap"><input name="reference" value="{{ filters.reference }}" placeholder="Search reference"></span></label>
+        <label class="field"><span>Staff member</span><span class="input-wrap"><input name="staff" value="{{ filters.staff }}" placeholder="Staff name"></span></label>
+        <label class="field"><span>Action</span><span class="input-wrap"><input name="action" value="{{ filters.action }}" placeholder="e.g. FLAG_CREATED"></span></label>
+        <label class="field"><span>From</span><span class="input-wrap"><input type="date" name="from" value="{{ filters.from }}"></span></label>
+        <label class="field"><span>To</span><span class="input-wrap"><input type="date" name="to" value="{{ filters.to }}"></span></label>
+        <button class="btn btn-primary" type="submit">Filter</button>
+    </form>
+    {% if entries %}
+    <div class="table-wrap"><table><thead><tr><th>Date / time</th><th>Staff</th><th>Action</th><th>Transaction</th><th>Old status</th><th>New status</th><th>Details</th></tr></thead><tbody>
+    {% for entry in entries %}<tr><td>{{ entry.action_time }}</td><td>{{ entry.staff_name or 'System / customer' }}</td><td>{{ entry.action_type }}</td><td>{{ entry.reference_number or '—' }}</td><td>{{ entry.old_status or '—' }}</td><td>{{ entry.new_status or '—' }}</td><td>{{ entry.action_details or '—' }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state('No audit records', 'No events match the current filter.') }}{% endif %}
+    <nav class="pagination" aria-label="Audit pages"><span>{{ total }} events · Page {{ page }} of {{ pages }}</span><div>{% if page > 1 %}<a href="{{ url_for('staff_audit', page=page-1, **filters) }}">Previous</a>{% endif %}{% if page < pages %}<a href="{{ url_for('staff_audit', page=page+1, **filters) }}">Next</a>{% endif %}</div></nav>
+</section>
+{% endblock %}

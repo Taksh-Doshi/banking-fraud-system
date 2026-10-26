@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}{{ customer.full_name }} | SecureBank{% endblock %}
+{% block page_title %}{{ customer.full_name }}{% endblock %}
+{% block page_subtitle %}Customer {{ customer.customer_id }}{% endblock %}
+{% block content %}
+<section class="kpi-grid">
+    {% for account in accounts %}<article class="card account-card"><div class="card-heading"><h3>{{ account.account_number }}</h3>{{ badge(account.account_status) }}</div><p>{{ account.account_type|title }} · {{ account.balance|inr }}</p>
+        {% if can_manage and account.account_status != 'CLOSED' %}<form method="post" action="{{ url_for('set_account_status', account_id=account.customer_account_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="{{ 'ACTIVE' if account.account_status == 'FROZEN' else 'FROZEN' }}"><button class="btn btn-secondary" type="submit">{{ 'Unfreeze' if account.account_status == 'FROZEN' else 'Freeze' }} account</button></form>{% endif %}
+    </article>{% endfor %}
+</section>
+<section class="card flags-card"><div class="card-title-row"><div><h2>Recent transactions</h2></div></div>
+{% if activity %}<div class="table-wrap"><table><thead><tr><th>Time</th><th>Reference</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>{% for row in activity %}<tr><td>{{ row.transaction_time }}</td><td>{{ row.reference_number }}</td><td>{{ row.transaction_type|title }}</td><td>{{ row.amount|inr }}</td><td>{{ badge(row.transaction_status) }}</td></tr>{% endfor %}</tbody></table></div>{% else %}{{ empty_state() }}{% endif %}</section>
+<section class="card flags-card"><div class="card-title-row"><div><h2>Fraud flags</h2></div></div>
+{% if flags %}<div class="table-wrap"><table><thead><tr><th>Flagged</th><th>Reference</th><th>Rule</th><th>Severity</th><th>Status</th></tr></thead><tbody>{% for row in flags %}<tr><td>{{ row.flagged_at }}</td><td>{{ row.reference_number }}</td><td>{{ row.rule_name }}</td><td>{{ badge(row.severity) }}</td><td>{{ badge(row.flag_status) }}</td></tr>{% endfor %}</tbody></table></div>{% else %}{{ empty_state() }}{% endif %}</section>
+{% endblock %}

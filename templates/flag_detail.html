@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Flag {{ flag.flag_id }} | SecureBank{% endblock %}
+{% block page_title %}Flag review{% endblock %}
+{% block page_subtitle %}Flag #{{ flag.flag_id }} · {{ flag.reference_number }}{% endblock %}
+{% block content %}
+<div class="investigation-top"><a class="back-link" href="{{ url_for('staff_flags') }}">← Back to fraud flags</a><div>{{ badge(flag.flag_status) }} {{ badge(flag.severity) }}</div></div>
+<section class="card case-summary">
+    <div class="case-risk"><span class="critical-shield">!</span><div><span>{{ flag.flag_source }} · {{ flag.rule_id or 'MANUAL REVIEW' }}</span><h2>{{ flag.rule_name }}</h2><p>{{ flag.rule_description or 'Staff-created review flag.' }}</p></div></div>
+    <div class="case-amount"><span>Transaction amount</span><strong>{{ flag.amount|inr }}</strong><small>{{ flag.transaction_time }}</small></div>
+</section>
+<div class="case-grid">
+    <section class="card case-main">
+        <div class="case-details">
+            <h3>Transaction and rule information</h3>
+            <div class="detail-grid">
+                <span>Reference<strong>{{ flag.reference_number }}</strong></span><span>Type<strong>{{ flag.transaction_type|title }}</strong></span><span>Status<strong>{{ flag.transaction_status|replace('_',' ')|title }}</strong></span>
+                <span>Sender<strong>{{ flag.from_account_number or '—' }} · {{ flag.from_name or '—' }}</strong></span><span>Recipient<strong>{{ flag.to_account_number or '—' }} · {{ flag.to_name or '—' }}</strong></span><span>Creator<strong>{{ flag.creator_name or 'Automated rule' }}</strong></span>
+                <span>Rule ID<strong>{{ flag.rule_id or '—' }}</strong></span><span>Rule type<strong>{{ flag.rule_type }}</strong></span><span>Threshold<strong>{{ flag.threshold_value if flag.threshold_value is not none else '—' }}</strong></span>
+            </div>
+            <div class="reason-box"><span>Why this was flagged</span><p>{{ flag.reason }}</p></div>
+            <h3>Investigations</h3>
+            {% if investigations %}
+            <div class="table-wrap"><table><thead><tr><th>Opened</th><th>Status</th><th>Assignee</th><th>Outcome</th><th></th></tr></thead><tbody>
+                {% for investigation in investigations %}<tr><td>{{ investigation.opened_at }}</td><td>{{ badge(investigation.investigation_status) }}</td><td>{{ investigation.staff_name or 'Unassigned' }}</td><td>{{ investigation.outcome or '—' }}</td><td><a class="row-action" href="{{ url_for('investigation_detail', investigation_id=investigation.investigation_id) }}">Open case</a></td></tr>{% endfor %}
+            </tbody></table></div>
+            {% else %}{{ empty_state('No investigations', 'An investigator can start a case from this flag.') }}{% endif %}
+            {% if current_user.role in ['INVESTIGATOR','MANAGER','ADMIN'] and flag.flag_status in ['OPEN','UNDER_INVESTIGATION'] %}
+            <form method="post" action="{{ url_for('open_investigation', flag_id=flag.flag_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary" type="submit">Open / take investigation</button></form>
+            {% endif %}
+            {% if flag.transaction_status in ['COMPLETED','UNDER_REVIEW'] %}
+            <form method="post" action="{{ url_for('reverse_transaction', transaction_id=flag.transaction_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" type="submit" {{ 'disabled' if flag.flag_status != 'CONFIRMED' else '' }}>Reverse confirmed transaction</button></form>
+            {% endif %}
+        </div>
+    </section>
+    <aside class="case-side">
+        {% if current_user.role in ['MANAGER','ADMIN'] %}
+        <section class="card"><h3>Assign investigation</h3>
+            {% for investigation in investigations %}
+            <form class="transaction-form" method="post" action="{{ url_for('investigation_detail', investigation_id=investigation.investigation_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="investigation_status" value="{{ investigation.investigation_status }}"><input type="hidden" name="outcome" value="{{ investigation.outcome or '' }}"><input type="hidden" name="findings" value="{{ investigation.findings or '' }}">
+                <label class="field"><span>Assigned investigator</span><span class="select-wrap"><select name="assigned_staff_id"><option value="">Unassigned</option>{% for person in investigators %}<option value="{{ person.staff_id }}" {{ 'selected' if person.staff_id == investigation.assigned_staff_id else '' }}>{{ person.staff_name }}</option>{% endfor %}</select></span></label>
+                <button class="btn btn-secondary full-btn" type="submit">Save assignment</button>
+            </form>
+            {% else %}<p>Open an investigation before assigning it.</p>{% endfor %}
+        </section>
+        {% endif %}
+    </aside>
+</div>
+<section class="card flags-card"><div class="card-title-row"><div><h2>Recent account activity</h2><p>Transactions associated with the sender account.</p></div></div>
+{% if recent %}<div class="table-wrap"><table><thead><tr><th>Time</th><th>Reference</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>{% for transaction in recent %}<tr><td>{{ transaction.transaction_time }}</td><td>{{ transaction.reference_number }}</td><td>{{ transaction.transaction_type|title }}</td><td>{{ transaction.amount|inr }}</td><td>{{ badge(transaction.transaction_status) }}</td></tr>{% endfor %}</tbody></table></div>{% else %}{{ empty_state() }}{% endif %}
+</section>
+{% endblock %}

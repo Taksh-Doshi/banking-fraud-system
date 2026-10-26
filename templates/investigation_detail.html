@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge %}
+{% block title %}Investigation {{ investigation.investigation_id }} | SecureBank{% endblock %}
+{% block page_title %}Investigation case{% endblock %}
+{% block page_subtitle %}{{ investigation.reference_number }} · {{ investigation.rule_name }}{% endblock %}
+{% block content %}
+<div class="investigation-top"><a class="back-link" href="{{ url_for('staff_investigations') }}">← Back to investigations</a><div>{{ badge(investigation.investigation_status) }} <span>Assigned to {{ investigation.staff_name or 'Unassigned' }}</span></div></div>
+<section class="card case-summary">
+    <div class="case-risk"><span class="critical-shield">!</span><div><span>{{ investigation.severity }} SEVERITY</span><h2>{{ investigation.rule_name }}</h2><p>{{ investigation.reference_number }} · transaction {{ investigation.transaction_id }}</p></div></div>
+    <div class="case-amount"><span>Transaction amount</span><strong>{{ investigation.amount|inr }}</strong><small>{{ investigation.transaction_status|replace('_',' ')|title }}</small></div>
+</section>
+<div class="case-grid">
+    <section class="card case-main">
+        <h3>Investigation update</h3>
+        <form class="transaction-form" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-grid">
+                <label class="field"><span>Status</span><span class="select-wrap"><select name="investigation_status" required>{% for value in ['OPEN','IN_PROGRESS','RESOLVED','CLOSED'] %}<option value="{{ value }}" {{ 'selected' if investigation.investigation_status == value else '' }}>{{ value|replace('_',' ')|title }}</option>{% endfor %}</select></span></label>
+                <label class="field"><span>Outcome</span><span class="select-wrap"><select name="outcome"><option value="">No outcome</option>{% for value in ['CONFIRMED_FRAUD','LEGITIMATE','INCONCLUSIVE'] %}<option value="{{ value }}" {{ 'selected' if investigation.outcome == value else '' }}>{{ value|replace('_',' ')|title }}</option>{% endfor %}</select></span></label>
+            </div>
+            {% if is_manager %}
+            <label class="field"><span>Assigned staff</span><span class="select-wrap"><select name="assigned_staff_id"><option value="">Unassigned</option>{% for person in investigators %}<option value="{{ person.staff_id }}" {{ 'selected' if person.staff_id == investigation.assigned_staff_id else '' }}>{{ person.staff_name }}</option>{% endfor %}</select></span></label>
+            {% endif %}
+            <label class="field"><span>Findings</span><span class="input-wrap"><textarea name="findings" rows="8" placeholder="Record evidence and the assessment">{{ investigation.findings or '' }}</textarea></span></label>
+            <div class="info-callout">Resolving or closing a case requires an outcome. Outcomes update the corresponding flag status in MySQL.</div>
+            <button class="btn btn-primary" type="submit">Save investigation</button>
+        </form>
+    </section>
+    <aside class="case-side">
+        <section class="card"><h3>Transaction details</h3>
+            <p>Reference<strong>{{ investigation.reference_number }}</strong></p>
+            <p>Amount<strong>{{ investigation.amount|inr }}</strong></p>
+            <p>Transaction status<strong>{{ investigation.transaction_status|replace('_',' ')|title }}</strong></p>
+            <p>Flag status<strong>{{ investigation.flag_status|replace('_',' ')|title }}</strong></p>
+            {% if investigation.flag_status == 'CONFIRMED' and investigation.transaction_status in ['COMPLETED','UNDER_REVIEW'] %}
+            <form method="post" action="{{ url_for('reverse_transaction', transaction_id=investigation.transaction_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger full-btn" type="submit">Reverse transaction</button></form>
+            {% endif %}
+        </section>
+    </aside>
+</div>
+{% endblock %}

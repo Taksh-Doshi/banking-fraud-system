@@ -1,10 +1,39 @@
 {% extends "base.html" %}
-
-{% block title %}Transaction | Banking Fraud Management{% endblock %}
-
+{% from "_icons.html" import icon %}
+{% from "_components.html" import empty_state %}
+{% block title %}New transaction | SecureBank{% endblock %}
+{% block page_title %}New transaction{% endblock %}
+{% block page_subtitle %}Choose an action and enter the transaction details.{% endblock %}
 {% block content %}
-<section class="content-card">
-    <h1>Transaction</h1>
-    <p>Transaction form placeholder.</p>
-</section>
+<div class="workspace-grid">
+    <section class="card form-card">
+        <div class="card-title-row"><div><h2>Move money</h2><p>Review your details before submitting.</p></div><span class="secure-label">{{ icon('lock') }} Secure</span></div>
+        <div class="tabs" role="tablist" aria-label="Transaction type">
+            {% for kind in ['DEPOSIT', 'WITHDRAWAL', 'TRANSFER'] %}
+            <button type="button" data-transaction-tab="{{ kind }}" class="{{ 'active' if request.args.get('type', 'TRANSFER') == kind else '' }}">{{ kind|title }}</button>
+            {% endfor %}
+        </div>
+        <form class="transaction-form" method="post" id="transaction-form" action="{{ url_for('new_transaction') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="transaction_type" id="transaction-type" value="{{ request.args.get('type', 'TRANSFER') }}">
+            <label class="field"><span>From / active account</span><span class="input-wrap"><input type="text" value="{{ current_user.account_number }} · {{ current_user.account_type|title }} · {{ current_user.balance|inr }}" readonly></span></label>
+            <label class="field recipient-field" data-recipient-group><span>Destination account number</span><span class="input-wrap">{{ icon('user') }}<input type="text" name="recipient" id="recipient" autocomplete="off" placeholder="e.g. ACC1002"></span></label>
+            <label class="field"><span>Amount (INR)</span><span class="input-wrap"><input type="number" name="amount" id="amount" min="0.01" step="0.01" required placeholder="0.00"></span></label>
+            <div class="info-callout">{{ icon('shield') }}<span>Transactions are processed by the database. A transfer may be placed under review by fraud rules.</span></div>
+            <button class="btn btn-primary full-btn" type="button" id="review-transaction">Review and confirm {{ icon('check') }}</button>
+        </form>
+    </section>
+    <aside class="card history-card">
+        <div class="card-title-row"><div><h2>Before you continue</h2><p>Transaction handling</p></div></div>
+        <ul class="plain-list"><li>Make sure the account number is correct.</li><li>Only active accounts can send or receive funds.</li><li>A failed transaction is recorded for audit and leaves balances unchanged.</li><li>An under-review status does not reveal internal flag details to customers.</li></ul>
+        <a class="btn btn-secondary full-btn" href="{{ url_for('transaction_history') }}">Review transaction history</a>
+    </aside>
+</div>
+<div class="modal-layer" id="transaction-modal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="modal-icon">{{ icon('swap') }}</div><h2 id="confirm-title">Confirm transaction</h2><p>Check the real details entered before submitting.</p>
+        <div class="review-list"><span>Type<strong id="confirm-type"></strong></span><span>From<strong>{{ current_user.account_number }}</strong></span><span>To<strong id="confirm-recipient">—</strong></span><span>Amount<strong id="confirm-amount"></strong></span></div>
+        <div class="modal-actions"><button class="btn btn-secondary" type="button" id="cancel-transaction">Go back</button><button class="btn btn-primary" type="submit" form="transaction-form">Confirm transaction</button></div>
+    </section>
+</div>
 {% endblock %}

@@ -1,10 +1,49 @@
 {% extends "base.html" %}
-
-{% block title %}Customer Dashboard | Banking Fraud Management{% endblock %}
-
+{% from "_icons.html" import icon %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Dashboard | SecureBank{% endblock %}
+{% block page_title %}Welcome, {{ current_user.full_name }}{% endblock %}
+{% block page_subtitle %}Your current account activity and balance.{% endblock %}
 {% block content %}
-<section class="content-card">
-    <h1>Customer Dashboard</h1>
-    <p>Customer dashboard placeholder.</p>
+<section class="balance-layout">
+    <article class="card balance-card">
+        <div class="balance-head"><div><span>Available balance</span><strong>{{ current_user.balance|inr }}</strong><small>{{ current_user.account_type|title }} account · {{ current_user.account_number }}</small></div>{{ badge(current_user.account_status) }}</div>
+        <div class="chart-label"><span>Last 30 days</span><span>Money in <strong>{{ totals.money_in|inr }}</strong> · Money out <strong>{{ totals.money_out|inr }}</strong></span></div>
+        <div class="info-callout">{{ icon('clock') }}<span>Activity totals use completed and under-review transaction records from the database.</span></div>
+    </article>
+    <article class="card account-card">
+        <div class="card-heading"><div><span>ACTIVE ACCOUNT</span><h3>{{ current_user.account_type|title }}</h3></div>{{ badge(current_user.account_status) }}</div>
+        <div class="account-number"><span>Account number</span><strong>{{ current_user.account_number }}</strong></div>
+        <div class="account-meta"><div><span>Account type</span><strong>{{ current_user.account_type|title }}</strong></div><div><span>Status</span><strong>{{ current_user.account_status|title }}</strong></div></div>
+    </article>
+</section>
+<section>
+    <div class="section-bar"><h2>Quick actions</h2><p>Move money securely from your active account.</p></div>
+    <div class="quick-grid">
+        <a class="quick-action" href="{{ url_for('new_transaction', type='DEPOSIT') }}"><i>{{ icon('plus') }}</i><div><strong>Deposit</strong><span>Add funds to your account</span></div>{{ icon('chevron') }}</a>
+        <a class="quick-action" href="{{ url_for('new_transaction', type='TRANSFER') }}"><i>{{ icon('swap') }}</i><div><strong>Transfer</strong><span>Send funds to an account</span></div>{{ icon('chevron') }}</a>
+        <a class="quick-action" href="{{ url_for('new_transaction', type='WITHDRAWAL') }}"><i>{{ icon('wallet') }}</i><div><strong>Withdraw</strong><span>Withdraw from your balance</span></div>{{ icon('chevron') }}</a>
+        <a class="quick-action" href="{{ url_for('transaction_history') }}"><i>{{ icon('file') }}</i><div><strong>History</strong><span>Review account transactions</span></div>{{ icon('chevron') }}</a>
+    </div>
+</section>
+<section class="dashboard-bottom">
+    <article class="card">
+        <div class="card-title-row"><div><h2>Recent transactions</h2><p>Your latest account activity</p></div><a href="{{ url_for('transaction_history') }}">View all</a></div>
+        {% if recent %}
+        <div class="transaction-list">
+            {% for transaction in recent %}
+            <a class="transaction-row" href="{{ url_for('transaction_detail', transaction_id=transaction.transaction_id) }}">
+                <span class="transaction-icon">{{ icon('swap') }}</span>
+                <span class="transaction-name"><strong>{{ transaction.transaction_type|title }} · {{ transaction.reference_number }}</strong><small>{{ transaction.transaction_time }}</small></span>
+                <span class="transaction-amount"><strong>{{ transaction.amount|inr }}</strong>{{ badge('Under review', 'neutral') if transaction.transaction_status == 'UNDER_REVIEW' else badge(transaction.transaction_status) }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}{{ empty_state('No transactions yet', 'Transactions for this account will appear here.') }}{% endif %}
+    </article>
+    <article class="card spend-card">
+        <div class="card-title-row"><div><h2>Account activity</h2><p>Trailing 30 days</p></div></div>
+        <div class="activity-totals"><p>Money in<strong>{{ totals.money_in|inr }}</strong></p><p>Money out<strong>{{ totals.money_out|inr }}</strong></p></div>
+    </article>
 </section>
 {% endblock %}

@@ -1,21 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="en" class="dark" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Banking Fraud Management{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}SecureBank{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header class="site-header">
-        <a class="brand" href="{{ url_for('index') }}">Banking Fraud Management</a>
-        <nav aria-label="Main navigation">
-            <a href="{{ url_for('index') }}">Home</a>
+{% if current_user and current_role in ['CUSTOMER', 'STAFF'] %}
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <a class="logo side-logo" href="{{ url_for('index') }}">
+            <span class="logo-mark">{{ icon('shield', 30) }}</span>
+            <span class="logo-copy"><strong>Secure<b>Bank</b></strong><small>Safer transactions. Stronger tomorrow.</small></span>
+        </a>
+        <div class="side-label">{{ 'OPERATIONS' if current_role == 'STAFF' else 'PERSONAL BANKING' }}</div>
+        <nav aria-label="Primary navigation">
+            {% if current_role == 'CUSTOMER' %}
+                <a class="nav-item {{ 'active' if request.endpoint == 'customer_dashboard' else '' }}" href="{{ url_for('customer_dashboard') }}">{{ icon('grid') }}<span>Dashboard</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint == 'new_transaction' else '' }}" href="{{ url_for('new_transaction') }}">{{ icon('swap') }}<span>New transaction</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint in ['transaction_history', 'transaction_detail'] else '' }}" href="{{ url_for('transaction_history') }}">{{ icon('wallet') }}<span>Transactions</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint == 'customer_settings' else '' }}" href="{{ url_for('customer_settings') }}">{{ icon('settings') }}<span>Settings</span></a>
+            {% else %}
+                <a class="nav-item {{ 'active' if request.endpoint == 'staff_dashboard' else '' }}" href="{{ url_for('staff_dashboard') }}">{{ icon('grid') }}<span>Dashboard</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint in ['staff_flags', 'staff_flag_detail', 'create_manual_flag'] else '' }}" href="{{ url_for('staff_flags') }}">{{ icon('shield') }}<span>Fraud flags</span></a>
+                {% if current_user.role in ['ANALYST', 'MANAGER', 'ADMIN'] %}
+                    <a class="nav-item" href="{{ url_for('create_manual_flag') }}">{{ icon('alert') }}<span>Create manual flag</span></a>
+                {% endif %}
+                <a class="nav-item {{ 'active' if request.endpoint in ['staff_investigations', 'investigation_detail'] else '' }}" href="{{ url_for('staff_investigations') }}">{{ icon('search') }}<span>Investigations</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint == 'staff_audit' else '' }}" href="{{ url_for('staff_audit') }}">{{ icon('file') }}<span>Audit log</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint in ['staff_customers', 'staff_customer_detail'] else '' }}" href="{{ url_for('staff_customers') }}">{{ icon('users') }}<span>Customers</span></a>
+                <a class="nav-item {{ 'active' if request.endpoint == 'staff_reports' else '' }}" href="{{ url_for('staff_reports') }}">{{ icon('clock') }}<span>Reports</span></a>
+                {% if current_user.role in ['MANAGER', 'ADMIN'] %}
+                    <a class="nav-item {{ 'active' if request.endpoint == 'weekly_analysis' else '' }}" href="{{ url_for('weekly_analysis') }}">{{ icon('check') }}<span>Weekly analysis</span></a>
+                {% endif %}
+                <a class="nav-item {{ 'active' if request.endpoint == 'staff_settings' else '' }}" href="{{ url_for('staff_settings') }}">{{ icon('settings') }}<span>Staff settings</span></a>
+            {% endif %}
         </nav>
-    </header>
-    <main class="page-content">
-        {% block content %}{% endblock %}
+        <div class="side-spacer"></div>
+        <form action="{{ url_for('logout') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="nav-item logout" type="submit">{{ icon('logout') }}<span>Sign out</span></button>
+        </form>
+        <div class="side-user">
+            <span class="avatar">{{ (current_user.staff_name if current_role == 'STAFF' else current_user.full_name)[:1] }}</span>
+            <span><strong>{{ current_user.staff_name if current_role == 'STAFF' else current_user.full_name }}</strong>
+            <small>{{ current_user.role if current_role == 'STAFF' else current_user.account_number }}</small></span>
+        </div>
+    </aside>
+    <main class="main">
+        <header class="topbar">
+            <button class="icon-btn mobile-menu" type="button" id="menu-toggle" aria-label="Open navigation">{{ icon('grid') }}</button>
+            <div class="topbar-title">
+                <h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1>
+                <p>{% block page_subtitle %}{% endblock %}</p>
+            </div>
+            <div class="topbar-actions">
+                {% if current_role == 'CUSTOMER' and switcher_accounts|length > 1 %}
+                <form class="account-switcher" action="{{ url_for('switch_account') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label class="visually-hidden" for="account-switch">Active account</label>
+                    <select id="account-switch" name="account_id" onchange="this.form.submit()">
+                        {% for account in switcher_accounts %}
+                        <option value="{{ account.customer_account_id }}" {{ 'selected' if account.customer_account_id == current_user.customer_account_id else '' }}>{{ account.account_number }} · {{ account.account_type|title }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% endif %}
+                <button class="icon-btn theme-btn" type="button" id="theme-toggle" aria-label="Toggle color theme">{{ icon('sun') }}</button>
+                <div class="profile">
+                    <span class="avatar">{{ (current_user.staff_name if current_role == 'STAFF' else current_user.full_name)[:1] }}</span>
+                    <span><strong>{{ current_user.staff_name if current_role == 'STAFF' else current_user.full_name }}</strong><small>{{ current_user.role if current_role == 'STAFF' else 'Customer' }}</small></span>
+                </div>
+            </div>
+        </header>
+        <div class="page-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-stack" role="status">
+                {% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}
+                </div>
+            {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </div>
     </main>
-    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+</div>
+{% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="public-flash">{% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% block public_content %}{% endblock %}
+{% endif %}
+<script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 </body>
 </html>

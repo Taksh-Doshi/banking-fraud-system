@@ -1,10 +1,32 @@
 {% extends "base.html" %}
-
-{% block title %}Login | Banking Fraud Management{% endblock %}
-
-{% block content %}
-<section class="content-card">
-    <h1>Login</h1>
-    <p>Login page placeholder. Authentication will be added in a later phase.</p>
-</section>
+{% from "_icons.html" import icon %}
+{% block title %}Sign in | SecureBank{% endblock %}
+{% block public_content %}
+<main class="login-page">
+    <section class="login-form-side">
+        <a class="back-link" href="{{ url_for('index') }}">← Back to home</a>
+        <div class="login-box">
+            <a class="logo" href="{{ url_for('index') }}">{{ icon('shield', 34) }}<span class="logo-copy"><strong>Secure<b>Bank</b></strong><small>Safer transactions. Stronger tomorrow.</small></span></a>
+            <div class="login-heading"><h1>Welcome back</h1><p>Sign in to your secure banking portal.</p></div>
+            <div class="role-switch" role="group" aria-label="Choose sign-in type">
+                <button type="button" data-role-choice="customer" class="{{ 'active' if role_hint != 'staff' else '' }}">{{ icon('user') }} Customer</button>
+                <button type="button" data-role-choice="staff" class="{{ 'active' if role_hint == 'staff' else '' }}">{{ icon('shield') }} Staff</button>
+            </div>
+            <form method="post" action="{{ url_for('login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="role" id="login-role" value="{{ 'staff' if role_hint == 'staff' else 'customer' }}">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <label class="field"><span id="login-id-label">{{ 'Staff email' if role_hint == 'staff' else 'Customer ID' }}</span><span class="input-wrap">{{ icon('user') }}<input type="text" name="identifier" autocomplete="username" required value="{{ request.form.get('identifier', '') }}" placeholder="{{ 'name@fraudbank.test' if role_hint == 'staff' else 'CUST001' }}"></span></label>
+                <label class="field"><span>Password</span><span class="input-wrap">{{ icon('lock') }}<input type="password" name="password" autocomplete="current-password" required></span></label>
+                <button class="btn btn-primary full-btn" type="submit">Sign in securely</button>
+            </form>
+            <p class="security-note">{{ icon('lock') }} Credentials are verified without revealing which field was incorrect.</p>
+        </div>
+    </section>
+    <aside class="login-art">
+        <div class="art-shield">{{ icon('shield', 42) }}</div>
+        <div class="art-copy"><h2>Security that stays visible.</h2><p>Monitor account activity and review fraud flags with an auditable workflow.</p></div>
+        <small>SecureBank · Demonstration environment</small>
+    </aside>
+</main>
 {% endblock %}

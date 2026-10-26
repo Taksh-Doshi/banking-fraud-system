@@ -1,10 +1,24 @@
 {% extends "base.html" %}
-
-{% block title %}Fraud Flags | Banking Fraud Management{% endblock %}
-
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Fraud flags | SecureBank{% endblock %}
+{% block page_title %}Fraud flags{% endblock %}
+{% block page_subtitle %}Review flags created by database rules and staff.{% endblock %}
 {% block content %}
-<section class="content-card">
-    <h1>Fraud Flags</h1>
-    <p>Fraud flag review placeholder.</p>
+<section class="card flags-card">
+    <form class="filters" method="get">
+        <label class="field"><span>Search</span><span class="search-box"><input type="search" name="q" value="{{ query }}" placeholder="Reference, rule or reason"></span></label>
+        {% for name, options in [('status',['OPEN','UNDER_INVESTIGATION','CONFIRMED','FALSE_POSITIVE','CLOSED']),('severity',['LOW','MEDIUM','HIGH','CRITICAL']),('source',['AUTOMATIC','MANUAL'])] %}
+        <label class="field"><span>{{ name|title }}</span><span class="select-wrap"><select name="{{ name }}"><option value="">All</option>{% for option in options %}<option value="{{ option }}" {{ 'selected' if filters.get(name) == option else '' }}>{{ option|replace('_',' ')|title }}</option>{% endfor %}</select></span></label>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Filter</button>
+    </form>
+    {% if flags %}
+    <div class="table-wrap"><table><thead><tr><th>Flagged</th><th>Rule</th><th>Transaction</th><th>Accounts</th><th>Amount</th><th>Source</th><th>Severity</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for flag in flags %}
+    <tr><td>{{ flag.flagged_at }}</td><td><strong>{{ flag.rule_name }}</strong><small>{{ flag.rule_id or 'No rule ID' }}</small></td><td>{{ flag.reference_number }}</td><td>{{ flag.from_account_number or '—' }} → {{ flag.to_account_number or '—' }}</td><td>{{ flag.amount|inr }}</td><td>{{ badge(flag.flag_source) }}</td><td>{{ badge(flag.severity) }}</td><td>{{ badge(flag.flag_status) }}</td><td><a class="row-action" href="{{ url_for('staff_flag_detail', flag_id=flag.flag_id) }}">Details</a></td></tr>
+    {% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state('No matching flags', 'Try different filters or create a manual flag for a transaction.') }}{% endif %}
+    <nav class="pagination" aria-label="Flag pages"><span>Page {{ page }} of {{ pages }}</span><div>{% if page > 1 %}<a href="{{ url_for('staff_flags', page=page-1, q=query, status=filters.status, severity=filters.severity, source=filters.source) }}">Previous</a>{% endif %}{% if page < pages %}<a href="{{ url_for('staff_flags', page=page+1, q=query, status=filters.status, severity=filters.severity, source=filters.source) }}">Next</a>{% endif %}</div></nav>
 </section>
 {% endblock %}

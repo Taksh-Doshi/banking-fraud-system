@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "_components.html" import badge, empty_state %}
+{% block title %}Investigations | SecureBank{% endblock %}
+{% block page_title %}Investigations{% endblock %}
+{% block page_subtitle %}Cases assigned to you and unassigned cases available to investigators.{% endblock %}
+{% block content %}
+<section class="card flags-card">
+    {% if investigations %}
+    <div class="table-wrap"><table><thead><tr><th>Opened</th><th>Flag / rule</th><th>Transaction</th><th>Amount</th><th>Status</th><th>Assignee</th><th>Outcome</th><th></th></tr></thead><tbody>
+    {% for item in investigations %}<tr><td>{{ item.opened_at }}</td><td>{{ item.rule_name }} · {{ badge(item.severity) }}</td><td>{{ item.reference_number }}</td><td>{{ item.amount|inr }}</td><td>{{ badge(item.investigation_status) }}</td><td>{{ item.staff_name or 'Unassigned' }}</td><td>{{ item.outcome or '—' }}</td><td><a class="row-action" href="{{ url_for('investigation_detail', investigation_id=item.investigation_id) }}">Review</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}{{ empty_state('No investigations', 'There are no assigned or unassigned cases to display.') }}{% endif %}
+</section>
+{% endblock %}
