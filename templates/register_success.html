@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Account Created | SecureBank{% endblock %}
+{% block public_content %}
+<main class="login-page">
+    <section class="login-form-side">
+        <div class="login-box success-box">
+            <a class="logo" href="{{ url_for('index') }}">{{ icon('shield', 34) }}<span class="logo-copy"><strong>Secure<b>Bank</b></strong><small>Safer transactions. Stronger tomorrow.</small></span></a>
+
+            <div class="success-badge-wrap">
+                <span class="success-icon-large">{{ icon('check', 28) }}</span>
+            </div>
+
+            <div class="login-heading" style="text-align: center; margin: 20px 0;">
+                <h1>Account Created!</h1>
+                <p>Welcome to SecureBank. Your personal account is active.</p>
+            </div>
+
+            {% if message %}
+            <div class="info-callout" style="margin-bottom: 20px;">
+                {{ icon('shield') }}
+                <span>{{ message }}</span>
+            </div>
+            {% endif %}
+
+            <div class="credentials-card">
+                <div class="cred-row">
+                    <div class="cred-info">
+                        <span class="cred-label">YOUR CUSTOMER ID</span>
+                        <strong class="cred-value" id="generated-customer-id">{{ customer_id }}</strong>
+                    </div>
+                    <button type="button" class="copy-btn" data-copy-target="generated-customer-id" aria-label="Copy customer ID">
+                        {{ icon('copy', 16) }}
+                        <span>Copy</span>
+                    </button>
+                </div>
+
+                <div class="cred-divider"></div>
+
+                <div class="cred-row">
+                    <div class="cred-info">
+                        <span class="cred-label">ACCOUNT NUMBER</span>
+                        <strong class="cred-value" id="generated-account-number">{{ account_number }}</strong>
+                    </div>
+                    <button type="button" class="copy-btn" data-copy-target="generated-account-number" aria-label="Copy account number">
+                        {{ icon('copy', 16) }}
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="security-warning-box">
+                {{ icon('alert', 18) }}
+                <div>
+                    <strong>Important</strong>
+                    <p>Save your Customer ID: you need it to log in. We do not display passwords for your safety.</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 24px;">
+                <a class="btn btn-primary full-btn" href="{{ url_for('login') }}">Go to Sign In</a>
+            </div>
+        </div>
+    </section>
+
+    <aside class="login-art">
+        <div class="art-shield">{{ icon('shield', 42) }}</div>
+        <div class="art-copy">
+            <h2>Your financial home is ready.</h2>
+            <p>Log in with your Customer ID to transfer money, view balances, and experience automated fraud defense.</p>
+            <div class="art-stat">
+                <strong>Protected</strong>
+                <span>Real-time monitoring</span>
+            </div>
+        </div>
+        <small>SecureBank · Demonstration environment</small>
+    </aside>
+</main>
+<span class="visually-hidden" aria-live="polite" id="copy-live-region"></span>
+{% endblock %}

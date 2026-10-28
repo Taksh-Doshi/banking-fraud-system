@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Create an Account | SecureBank{% endblock %}
+{% block public_content %}
+<main class="login-page">
+    <section class="login-form-side">
+        <a class="back-link" href="{{ url_for('login') }}">← Back to sign in</a>
+        <div class="login-box register-box">
+            <a class="logo" href="{{ url_for('index') }}">{{ icon('shield', 34) }}<span class="logo-copy"><strong>Secure<b>Bank</b></strong><small>Safer transactions. Stronger tomorrow.</small></span></a>
+            <div class="login-heading">
+                <h1>Open an Account</h1>
+                <p>Register online for a secure, fraud-monitored bank account.</p>
+            </div>
+
+            <form method="post" action="{{ url_for('register') }}" id="register-form" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-section-title">
+                    <span>1. PERSONAL DETAILS</span>
+                </div>
+
+                <label class="field">
+                    <span>Full name *</span>
+                    <span class="input-wrap">
+                        {{ icon('user') }}
+                        <input type="text" name="full_name" required value="{{ form.get('full_name', '') }}" placeholder="e.g. Rahul Sharma" autocomplete="name">
+                    </span>
+                    <small>Letters, spaces, dots, and hyphens only.</small>
+                </label>
+
+                <label class="field">
+                    <span>Date of birth *</span>
+                    <span class="input-wrap">
+                        {{ icon('clock') }}
+                        <input type="date" name="date_of_birth" required value="{{ form.get('date_of_birth', '') }}" autocomplete="bday">
+                    </span>
+                    <small>Must be 18 years or older.</small>
+                </label>
+
+                <label class="field">
+                    <span>Email address *</span>
+                    <span class="input-wrap">
+                        {{ icon('file') }}
+                        <input type="email" name="email" required value="{{ form.get('email', '') }}" placeholder="name@example.com" autocomplete="email">
+                    </span>
+                </label>
+
+                <label class="field">
+                    <span>Phone number *</span>
+                    <span class="input-wrap">
+                        {{ icon('users') }}
+                        <input type="tel" name="phone" required value="{{ form.get('phone', '') }}" placeholder="10-digit mobile number" autocomplete="tel">
+                    </span>
+                    <small>10 digits (accepts +91 or leading 0).</small>
+                </label>
+
+                <label class="field">
+                    <span>Residential address</span>
+                    <span class="input-wrap">
+                        <textarea name="address" rows="2" placeholder="Full address with city and pincode">{{ form.get('address', '') }}</textarea>
+                    </span>
+                </label>
+
+                <div class="form-section-title">
+                    <span>2. ACCOUNT DETAILS</span>
+                </div>
+
+                <label class="field">
+                    <span>Account type *</span>
+                    <span class="select-wrap">
+                        <select name="account_type" required>
+                            <option value="SAVINGS" {{ 'selected' if form.get('account_type', 'SAVINGS') == 'SAVINGS' else '' }}>Savings Account</option>
+                            <option value="CURRENT" {{ 'selected' if form.get('account_type') == 'CURRENT' else '' }}>Current Account</option>
+                            <option value="SALARY" {{ 'selected' if form.get('account_type') == 'SALARY' else '' }}>Salary Account</option>
+                        </select>
+                        {{ icon('swap') }}
+                    </span>
+                </label>
+
+                <label class="field">
+                    <span>Initial deposit (₹ optional)</span>
+                    <span class="input-wrap">
+                        {{ icon('wallet') }}
+                        <input type="number" step="0.01" min="0" name="initial_deposit" value="{{ form.get('initial_deposit', '') }}" placeholder="0.00">
+                    </span>
+                    <small>Leave 0.00 or enter amount to deposit immediately.</small>
+                </label>
+
+                <div class="form-section-title">
+                    <span>3. SECURITY & PASSWORD</span>
+                </div>
+
+                <label class="field">
+                    <span>Password *</span>
+                    <span class="input-wrap">
+                        {{ icon('lock') }}
+                        <input type="password" name="password" id="register-password" required autocomplete="new-password" placeholder="Min. 8 characters">
+                        <button type="button" class="eye-toggle" data-password-toggle data-target="register-password" aria-label="Show password" aria-pressed="false">{{ icon('eye') }}</button>
+                    </span>
+                    <small class="password-hint">Min. 8 characters with at least one uppercase, one lowercase, one digit, and one special character.</small>
+                </label>
+
+                <label class="field">
+                    <span>Confirm password *</span>
+                    <span class="input-wrap">
+                        {{ icon('lock') }}
+                        <input type="password" name="confirm_password" id="register-confirm-password" required autocomplete="new-password" placeholder="Re-enter your password">
+                        <button type="button" class="eye-toggle" data-password-toggle data-target="register-confirm-password" aria-label="Show password" aria-pressed="false">{{ icon('eye') }}</button>
+                    </span>
+                </label>
+
+                <label class="field-checkbox">
+                    <input type="checkbox" name="terms" id="register-terms" required {{ 'checked' if form.get('terms') else '' }}>
+                    <span>I agree to the <a href="#terms" class="auth-link">Terms and Conditions</a> and authorize transaction fraud monitoring.</span>
+                </label>
+
+                <button class="btn btn-primary full-btn" type="submit" id="register-submit-btn">
+                    <span>Open Account Securely</span>
+                </button>
+            </form>
+
+            <div class="support-copy">
+                Already have an account? <a href="{{ url_for('login') }}" class="auth-link">Sign in here</a>
+            </div>
+        </div>
+    </section>
+
+    <aside class="login-art">
+        <div class="art-shield">{{ icon('shield', 42) }}</div>
+        <div class="art-copy">
+            <h2>Banking designed for safety.</h2>
+            <p>Every account is protected by real-time automated fraud rules and comprehensive audit trails.</p>
+            <div class="art-stat">
+                <strong>Instant</strong>
+                <span>Account setup</span>
+            </div>
+            <div class="art-stat">
+                <strong>24/7</strong>
+                <span>Fraud monitoring</span>
+            </div>
+        </div>
+        <small>SecureBank · Demonstration environment</small>
+    </aside>
+</main>
+<span class="visually-hidden" aria-live="polite" id="copy-live-region"></span>
+{% endblock %}

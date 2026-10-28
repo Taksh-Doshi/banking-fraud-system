@@ -5,6 +5,9 @@ import logging
 import os
 import re
 import secrets
+import time
+from datetime import date, datetime
+from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from pathlib import Path
@@ -37,6 +40,37 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# In-memory rate limiters (IP -> list of timestamps)
+REGISTER_LIMITS: dict[str, list[float]] = defaultdict(list)
+REGISTER_MAX_ATTEMPTS = 5
+REGISTER_WINDOW_SECONDS = 600  # 10 minutes
+
+FORGOT_LIMITS: dict[str, list[float]] = defaultdict(list)
+FORGOT_MAX_ATTEMPTS = 5
+FORGOT_WINDOW_SECONDS = 900  # 15 minutes
+
+
+def _normalize_phone(raw: str) -> str | None:
+    cleaned = re.sub(r"[\s\-\(\).]", "", raw)
+    if cleaned.startswith("+91"):
+        cleaned = cleaned[3:]
+    elif cleaned.startswith("0") and len(cleaned) == 11:
+        cleaned = cleaned[1:]
+    if re.fullmatch(r"\d{10}", cleaned):
+        return cleaned
+    return None
+
+
+def _is_strong_password(p: str) -> bool:
+    if len(p) < 8:
+        return False
+    return (
+        any(c.isupper() for c in p)
+        and any(c.islower() for c in p)
+        and any(c.isdigit() for c in p)
+        and any(not c.isalnum() for c in p)
+    )
 secret_key = os.getenv("SECRET_KEY") or os.getenv("FLASK_SECRET_KEY")
 if not secret_key:
     raise RuntimeError("Set SECRET_KEY in .env before starting the application.")
@@ -264,6 +298,202 @@ def login() -> Any:
         flash("The supplied credentials could not be verified.", "error")
     return render_template("login.html", role_hint=role_hint, next_url=next_url or "")
 
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Registration flow (customer self‑sign‑up)
+# ---------------------------------------------------------------------------
+
+@app.route("/register", methods=["GET", "POST"])
+def register() -> Any:
+    client_ip = request.remote_addr or "unknown"
+    now = time.time()
+    attempts = [ts for ts in REGISTER_LIMITS[client_ip] if now - ts < REGISTER_WINDOW_SECONDS]
+    REGISTER_LIMITS[client_ip] = attempts
+
+    if request.method == "POST":
+        if len(attempts) >= REGISTER_MAX_ATTEMPTS:
+            flash("Too many registration attempts. Please try again later.", "error")
+            return render_template("register.html", form=request.form), 429
+        attempts.append(now)
+
+        full_name = request.form.get("full_name", "").strip()
+        dob_str = request.form.get("date_of_birth", "").strip()
+        email = request.form.get("email", "").strip()
+        phone_raw = request.form.get("phone", "").strip()
+        address = request.form.get("address", "").strip()
+        account_type = request.form.get("account_type", "SAVINGS").strip().upper()
+        initial_deposit_raw = request.form.get("initial_deposit", "").strip()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        terms = request.form.get("terms")
+
+        # Server-side validations
+        if not full_name or not re.fullmatch(r"^[A-Za-z\s.\-]+$", full_name):
+            flash("Enter a valid full name (letters, spaces, dots, and hyphens only).", "error")
+            return render_template("register.html", form=request.form)
+
+        if not email or not re.fullmatch(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            flash("Enter a valid email address.", "error")
+            return render_template("register.html", form=request.form)
+
+        phone_norm = _normalize_phone(phone_raw) if phone_raw else None
+        if not phone_norm:
+            flash("Enter a valid 10-digit phone number (e.g. +91 9876543210 or 9876543210).", "error")
+            return render_template("register.html", form=request.form)
+
+        if not dob_str:
+            flash("Date of birth is required.", "error")
+            return render_template("register.html", form=request.form)
+
+        try:
+            dob_val = datetime.strptime(dob_str, "%Y-%m-%d").date()
+            today = date.today()
+            if dob_val > today:
+                flash("Date of birth cannot be in the future.", "error")
+                return render_template("register.html", form=request.form)
+            age = today.year - dob_val.year - ((today.month, today.day) < (dob_val.month, dob_val.day))
+            if age < 18:
+                flash("You must be at least 18 years old to open an account.", "error")
+                return render_template("register.html", form=request.form)
+        except ValueError:
+            flash("Enter a valid date of birth in YYYY-MM-DD format.", "error")
+            return render_template("register.html", form=request.form)
+
+        if account_type not in {"SAVINGS", "CURRENT", "SALARY"}:
+            flash("Choose a valid account type (Savings, Current, or Salary).", "error")
+            return render_template("register.html", form=request.form)
+
+        if initial_deposit_raw:
+            try:
+                initial_deposit = Decimal(initial_deposit_raw)
+                if initial_deposit < 0:
+                    flash("Initial deposit cannot be negative.", "error")
+                    return render_template("register.html", form=request.form)
+            except (InvalidOperation, ValueError):
+                flash("Enter a valid initial deposit amount.", "error")
+                return render_template("register.html", form=request.form)
+        else:
+            initial_deposit = Decimal("0.00")
+
+        if not password or not _is_strong_password(password):
+            flash("Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a digit, and a special character.", "error")
+            return render_template("register.html", form=request.form)
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template("register.html", form=request.form)
+
+        if not terms:
+            flash("You must accept the terms and conditions to register.", "error")
+            return render_template("register.html", form=request.form)
+
+        password_hash = generate_password_hash(password)
+
+        try:
+            proc_res = db.call_proc(
+                "sp_register_customer",
+                (
+                    full_name,
+                    dob_val,
+                    email,
+                    phone_norm,
+                    address or None,
+                    account_type,
+                    password_hash,
+                    initial_deposit,
+                    None,  # OUT p_customer_id
+                    None,  # OUT p_account_number
+                    None,  # OUT p_result
+                    None,  # OUT p_message
+                ),
+            )
+            p_customer_id = proc_res[8]
+            p_account_number = proc_res[9]
+            p_result = proc_res[10]
+            p_message = proc_res[11]
+
+            if p_result == "CREATED":
+                session["registered_customer_id"] = p_customer_id
+                session["registered_account_number"] = p_account_number
+                session["registered_message"] = p_message
+                return redirect(url_for("register_success"))
+            else:
+                flash(p_message or "Account creation failed.", "error")
+                return render_template("register.html", form=request.form)
+        except Exception:
+            logger.exception("Registration failed unexpectedly")
+            flash("Unable to create account right now. Please try again later.", "error")
+            return render_template("register.html", form=request.form)
+
+    return render_template("register.html", form={})
+
+
+@app.route("/register/success")
+def register_success() -> Any:
+    customer_id = session.pop("registered_customer_id", None)
+    account_number = session.pop("registered_account_number", None)
+    message = session.pop("registered_message", None)
+    if not customer_id:
+        return redirect(url_for("login"))
+    return render_template(
+        "register_success.html",
+        customer_id=customer_id,
+        account_number=account_number,
+        message=message,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Forgot Customer ID flow
+# ---------------------------------------------------------------------------
+
+@app.route("/forgot-id", methods=["GET", "POST"])
+def forgot_id() -> Any:
+    client_ip = request.remote_addr or "unknown"
+    now = time.time()
+    attempts = [ts for ts in FORGOT_LIMITS[client_ip] if now - ts < FORGOT_WINDOW_SECONDS]
+    FORGOT_LIMITS[client_ip] = attempts
+
+    matched_ids: list[str] = []
+    if request.method == "POST":
+        if len(attempts) >= FORGOT_MAX_ATTEMPTS:
+            flash("Too many attempts. Please try again later.", "error")
+            return render_template("forgot_id.html"), 429
+        attempts.append(now)
+
+        email = request.form.get("email", "").strip()
+        dob_str = request.form.get("date_of_birth", "").strip()
+        phone_raw = request.form.get("phone", "").strip()
+        phone_norm = _normalize_phone(phone_raw) if phone_raw else None
+
+        if not email or not dob_str or not phone_raw:
+            logger.warning("Forgot ID attempt with missing fields from IP %s", client_ip)
+            flash("We could not find an account matching those details.", "error")
+            return render_template("forgot_id.html")
+
+        try:
+            dob_val = datetime.strptime(dob_str, "%Y-%m-%d").date()
+        except ValueError:
+            logger.warning("Forgot ID attempt with invalid date format from IP %s", client_ip)
+            flash("We could not find an account matching those details.", "error")
+            return render_template("forgot_id.html")
+
+        rows = db.query_all(
+            "SELECT DISTINCT customer_id FROM CUSTOMER_ACCOUNT "
+            "WHERE LOWER(email) = LOWER(%s) AND date_of_birth = %s "
+            "AND (phone = %s OR phone = %s OR phone = %s) "
+            "AND account_status <> 'CLOSED'",
+            (email, dob_val, phone_raw, phone_norm or "", f"+91{phone_norm}" if phone_norm else ""),
+        )
+        if rows:
+            matched_ids = [r["customer_id"] for r in rows]
+            flash("Account located successfully.", "success")
+        else:
+            logger.warning("Failed forgot-ID lookup attempt from IP %s", client_ip)
+            flash("We could not find an account matching those details.", "error")
+
+    return render_template("forgot_id.html", customer_ids=matched_ids)
+
 
 @app.post("/logout")
 def logout() -> Any:
@@ -422,10 +652,13 @@ def customer_settings() -> Any:
         else:
             current = request.form.get("current_password", "")
             new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
             if not check_password_hash(g.user["password_hash"], current):
                 flash("Current password is incorrect.", "error")
-            elif len(new_password) < 10:
-                flash("Choose a password with at least 10 characters.", "error")
+            elif confirm_password and new_password != confirm_password:
+                flash("New password and confirmation do not match.", "error")
+            elif len(new_password) < 8 or not _is_strong_password(new_password):
+                flash("Choose a password with at least 8 characters including uppercase, lowercase, digit, and special character.", "error")
             else:
                 hashed = generate_password_hash(new_password)
                 db.execute(

@@ -6,7 +6,10 @@
     <header class="landing-nav">
         <a class="logo" href="{{ url_for('index') }}"><span class="logo-mark">{{ icon('shield', 34) }}</span><span class="logo-copy"><strong>Secure<b>Bank</b></strong><small>Safer transactions. Stronger tomorrow.</small></span></a>
         <nav aria-label="Main"><a href="#features">Protection</a><a href="#about">About</a></nav>
-        <a class="btn btn-primary" href="{{ url_for('login') }}">Sign in</a>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a class="btn btn-secondary" href="{{ url_for('register') }}">Create account</a>
+            <a class="btn btn-primary" href="{{ url_for('login') }}">Sign in</a>
+        </div>
     </header>
     <main>
         <section class="hero">
@@ -14,7 +17,10 @@
                 <span class="badge badge-info">{{ icon('shield', 14) }} Secure by design</span>
                 <h1>Your money.<br><span>Our priority.</span></h1>
                 <p>Manage everyday transactions with clear account information and thoughtful fraud monitoring.</p>
-                <div class="hero-actions"><a class="btn btn-primary" href="{{ url_for('login') }}">Get started {{ icon('check') }}</a><a class="btn btn-secondary" href="#features">Explore protection</a></div>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="{{ url_for('register') }}">Create account {{ icon('check') }}</a>
+                    <a class="btn btn-secondary" href="{{ url_for('login') }}">Sign in</a>
+                </div>
                 <div class="trust-row"><span class="security-box">{{ icon('lock') }} Protected account access</span></div>
             </div>
             <div class="hero-visual" aria-label="Account security illustration">

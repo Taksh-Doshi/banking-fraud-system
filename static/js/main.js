@@ -29,6 +29,10 @@
                     ? "name@fraudbank.test"
                     : "CUST001";
             }
+            const customerLinks = document.getElementById("customer-links");
+            if (customerLinks) {
+                customerLinks.hidden = selected === "staff";
+            }
             document.querySelectorAll("[data-role-choice]").forEach((item) => {
                 item.classList.toggle("active", item === button);
             });
@@ -95,4 +99,132 @@
     modal?.addEventListener("click", (event) => {
         if (event.target === modal) modal.hidden = true;
     });
+
+    // Password visibility toggle
+    const EYE_SVG = '<svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const EYE_OFF_SVG = '<svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
+
+    document.addEventListener("click", (e) => {
+        const toggleBtn = e.target.closest("[data-password-toggle], .eye-toggle");
+        if (!toggleBtn) return;
+        e.preventDefault();
+        const targetId = toggleBtn.dataset.target;
+        let input = targetId ? document.getElementById(targetId) : null;
+        if (!input) {
+            input = toggleBtn.closest(".input-wrap")?.querySelector("input");
+        }
+        if (!input) return;
+
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+        if (isPassword) {
+            input.dataset.originalPassword = "true";
+        } else {
+            delete input.dataset.originalPassword;
+        }
+        toggleBtn.setAttribute("aria-pressed", isPassword ? "true" : "false");
+        toggleBtn.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
+        toggleBtn.innerHTML = isPassword ? EYE_OFF_SVG : EYE_SVG;
+        input.focus();
+    });
+
+    // Reset password inputs on back/forward cache navigation
+    window.addEventListener("pageshow", () => {
+        document.querySelectorAll('input[data-original-password="true"]').forEach((input) => {
+            input.type = "password";
+            delete input.dataset.originalPassword;
+        });
+        document.querySelectorAll("[data-password-toggle], .eye-toggle").forEach((btn) => {
+            btn.setAttribute("aria-pressed", "false");
+            btn.setAttribute("aria-label", "Show password");
+            btn.innerHTML = EYE_SVG;
+        });
+    });
+
+    // Copy to clipboard helper with execCommand fallback
+    const copyTextToClipboard = (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+        return new Promise((resolve, reject) => {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            textArea.setAttribute("readonly", "");
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand("copy");
+                document.body.removeChild(textArea);
+                if (successful) resolve();
+                else reject(new Error("execCommand copy failed"));
+            } catch (err) {
+                document.body.removeChild(textArea);
+                reject(err);
+            }
+        });
+    };
+
+    const CHECK_SVG = '<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
+
+    document.addEventListener("click", async (e) => {
+        const copyBtn = e.target.closest(".copy-btn, [data-copy-target]");
+        if (!copyBtn) return;
+        e.preventDefault();
+        const targetId = copyBtn.dataset.copyTarget;
+        let textToCopy = "";
+        if (targetId) {
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) {
+                textToCopy = targetEl.value || targetEl.textContent || "";
+            }
+        }
+        if (!textToCopy && copyBtn.dataset.copyText) {
+            textToCopy = copyBtn.dataset.copyText;
+        }
+        textToCopy = textToCopy.trim();
+        if (!textToCopy) return;
+
+        try {
+            await copyTextToClipboard(textToCopy);
+            const originalHtml = copyBtn.innerHTML;
+            copyBtn.innerHTML = `${CHECK_SVG}<span>Copied!</span>`;
+            copyBtn.classList.add("copied");
+
+            let liveRegion = document.getElementById("copy-live-region");
+            if (!liveRegion) {
+                liveRegion = document.createElement("span");
+                liveRegion.id = "copy-live-region";
+                liveRegion.className = "visually-hidden";
+                liveRegion.setAttribute("aria-live", "polite");
+                document.body.appendChild(liveRegion);
+            }
+            if (liveRegion) {
+                liveRegion.textContent = `${textToCopy} copied to clipboard`;
+            }
+
+            setTimeout(() => {
+                copyBtn.innerHTML = originalHtml;
+                copyBtn.classList.remove("copied");
+            }, 2000);
+        } catch (err) {
+            console.error("Failed to copy:", err);
+        }
+    });
+
+    // Disable register submit button on form submission
+    const registerForm = document.querySelector('form[action*="register"]');
+    registerForm?.addEventListener("submit", () => {
+        if (registerForm.checkValidity()) {
+            const submitBtn = registerForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Creating account...";
+            }
+        }
+    });
+
 })();

@@ -6,10 +6,12 @@ import os
 from contextlib import contextmanager
 from typing import Any, Iterator, Sequence
 
+from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import pooling
 from mysql.connector.connection import MySQLConnection
 
+load_dotenv()
 
 _pool: pooling.MySQLConnectionPool | None = None
 
@@ -24,8 +26,8 @@ def _get_pool() -> pooling.MySQLConnectionPool:
             port=int(os.getenv("DB_PORT") or os.getenv("MYSQL_PORT", "3306")),
             user=os.getenv("DB_USER") or os.getenv("MYSQL_USER", ""),
             password=os.getenv("DB_PASSWORD") or os.getenv("MYSQL_PASSWORD", ""),
-            database=os.getenv("DB_NAME") or os.getenv("MYSQL_DATABASE", "banking_fraud_db"),
-            autocommit=False,
+            database=os.getenv("DB_NAME") or os.getenv("MYSQL_DATABASE", "banking_fraud_system"),
+            autocommit=True,
         )
     return _pool
 
@@ -41,11 +43,18 @@ def connection_context(staff_id: int | None = None) -> Iterator[MySQLConnection]
         finally:
             cursor.close()
         yield connection
-        connection.commit()
+        if not connection.autocommit:
+            connection.commit()
     except Exception:
-        connection.rollback()
+        if not connection.autocommit:
+            connection.rollback()
         raise
     finally:
+        try:
+            if not connection.autocommit:
+                connection.rollback()
+        except Exception:
+            pass
         connection.close()
 
 

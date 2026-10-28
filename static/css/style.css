@@ -311,3 +311,214 @@ td strong { color:var(--text);font-size:9px; }.table-link{border:0;background:tr
 @media(max-width:560px){
   .topbar{height:70px}.topbar-title h1{font-size:16px}.topbar-title p{display:none}.topbar-actions{gap:6px}.theme-btn{display:none}.page-content{padding:14px}.balance-layout,.quick-grid,.kpi-grid,.report-summary{grid-template-columns:1fr}.balance-card{padding:18px;min-height:250px}.balance-head strong{font-size:25px}.account-card{display:none}.quick-grid{display:grid;grid-template-columns:1fr 1fr}.quick-action{display:grid;justify-items:start;min-height:116px}.quick-action>svg{display:none}.dashboard-bottom{margin-top:13px}.transaction-row{padding:11px 0}.workspace-grid{display:block}.history-card{margin-top:14px}.filters{flex-wrap:wrap}.filters .search-box{flex-basis:100%}.filters .field{flex:1}.card-title-row .btn{font-size:0;padding:8px;min-height:36px}.card-title-row .btn span{font-size:0}.alert-strip{display:none}.staff-content{padding-top:14px}.staff-charts{display:block}.risk-card{margin-top:13px}.case-summary{display:block}.case-amount{text-align:left;margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft)}.investigation-top>div>span,.investigation-top .btn{display:none}.detail-grid{grid-template-columns:1fr 1fr}.detail-grid span:nth-child(3n){border-right:1px solid var(--border-soft)}.detail-grid span:nth-child(2n){border-right:0}.detail-grid span:nth-last-child(-n+3){border-bottom:1px solid var(--border-soft)}.detail-grid span:nth-last-child(-n+2){border-bottom:0}.form-grid{grid-template-columns:1fr}.theme-options{grid-template-columns:1fr}.hero{padding:45px 20px 50px;min-height:auto}.hero h1{font-size:42px;letter-spacing:-2px}.hero-content>p{font-size:12px}.hero-visual{height:410px;margin-top:35px}.landing-dashboard{width:470px;height:300px;right:44%}.secure-card{right:7px;width:245px;height:150px}.panel-balance{left:-10px}.panel-safe{left:3px;bottom:22px}.feature-grid{grid-template-columns:1fr}.features{padding:65px 20px}.landing-nav{padding:0 20px}.landing-nav .logo-copy small{display:none}.landing footer{display:grid}.error-art>span{font-size:75px}.error-shield{width:65px}.state-showcase{grid-template-columns:1fr;margin-top:50px}.modal-actions{grid-template-columns:1fr}.case-risk{align-items:flex-start}.case-risk p{display:none}.pagination>span{display:none}.pagination{justify-content:flex-end}.report-charts{display:block}.report-charts>.card+ .card{margin-top:13px}
 }
+
+/* Password Reveal & Eye Toggle */
+input[type=password]::-ms-reveal,
+input[type=password]::-ms-clear {
+  display: none;
+}
+
+.eye-toggle {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: auto;
+  border-radius: 4px;
+  transition: color .18s;
+}
+
+.eye-toggle:hover {
+  color: var(--text);
+}
+
+.eye-toggle:focus-visible {
+  outline: 2px solid var(--blue-bright);
+}
+
+.customer-auth-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -4px 0 6px;
+  font-size: 11px;
+}
+
+.auth-link {
+  color: var(--blue-bright);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 11px;
+  transition: opacity .18s;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+  opacity: .9;
+}
+
+/* Copy button & credential cards */
+.copy-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.copy-btn:hover {
+  border-color: var(--blue-bright);
+  background: var(--blue-soft);
+  color: var(--blue-bright);
+}
+
+.copy-btn.copied {
+  background: rgba(16, 185, 129, .15);
+  border-color: rgba(16, 185, 129, .4);
+  color: #10b981;
+}
+
+.credentials-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 18px 0;
+  display: grid;
+  gap: 12px;
+}
+
+.cred-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.cred-info {
+  display: grid;
+  gap: 2px;
+}
+
+.cred-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.cred-value {
+  font-size: 20px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--blue-bright);
+  letter-spacing: .5px;
+}
+
+.cred-divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin: 2px 0;
+}
+
+.security-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(245, 158, 11, .1);
+  border: 1px solid rgba(245, 158, 11, .3);
+  color: #f59e0b;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 11px;
+}
+
+.security-warning-box strong {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.security-warning-box p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.success-badge-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.success-icon-large {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, .15);
+  color: #10b981;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(16, 185, 129, .3);
+}
+
+.form-section-title {
+  margin: 14px 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.form-section-title span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .7px;
+  color: var(--blue-bright);
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 6px 0;
+}
+
+.field-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+
+.password-hint {
+  color: var(--subtle);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

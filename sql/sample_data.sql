@@ -262,7 +262,7 @@ VALUES
     ('TRANSFER', 8000.00, @now - INTERVAL 3 HOUR, 'COMPLETED',
      'SEED-R06-03', @acc9, @acc10),
     ('TRANSFER', 8000.00, @now - INTERVAL 2 HOUR, 'COMPLETED',
-     'SEED-R06-04', @acc3, @acc10),
+     'SEED-R06-04', @acc5, @acc10),
     ('TRANSFER', 8000.00, @now - INTERVAL 1 HOUR, 'COMPLETED',
      'SEED-R06-05', @acc4, @acc10);
 

@@ -178,7 +178,7 @@ def main() -> int:
     args = parser.parse_args()
 
     database_name = os.getenv("DB_NAME") or os.getenv(
-        "MYSQL_DATABASE", "banking_fraud_db"
+        "MYSQL_DATABASE", "banking_fraud_system"
     )
     if not re.fullmatch(r"[A-Za-z0-9_]+", database_name):
         parser.error("DB_NAME may contain only letters, numbers, and underscores.")
@@ -194,6 +194,7 @@ def main() -> int:
         parser.error("Set SECRET_KEY in .env before continuing.")
 
     connection = mysql.connector.connect(**config)
+    print(f"WARNING: Wiping and recreating all tables in database '{database_name}'...")
     try:
         for file_name in ("schema.sql", "procedures.sql"):
             load_script(connection, SQL_DIR / file_name, database_name)

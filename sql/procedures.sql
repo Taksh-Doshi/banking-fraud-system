@@ -205,7 +205,7 @@ BEGIN
           INTO v_count, v_high_conflict
         FROM BANK_TRANSACTION old_tx
         JOIN FRAUD_FLAG f ON f.transaction_id = old_tx.transaction_id
-        WHERE (old_tx.from_account_id = v_to OR old_tx.to_account_id = v_to)
+        WHERE old_tx.to_account_id = v_to
           AND old_tx.transaction_time < v_time
           AND f.flag_status IN ('OPEN', 'UNDER_INVESTIGATION', 'CONFIRMED');
         IF v_count > 0 THEN
@@ -689,6 +689,177 @@ BEGIN
                     AND other_flag.flag_status IN
                         ('OPEN', 'UNDER_INVESTIGATION', 'CONFIRMED')
               );
+        END IF;
+    END IF;
+END//
+
+DELIMITER ;
+
+DELIMITER //
+
+DELIMITER //
+
+DROP PROCEDURE IF EXISTS sp_register_customer//
+CREATE PROCEDURE sp_register_customer(
+    IN p_full_name VARCHAR(120),
+    IN p_date_of_birth DATE,
+    IN p_email VARCHAR(150),
+    IN p_phone VARCHAR(20),
+    IN p_address VARCHAR(255),
+    IN p_account_type VARCHAR(30),
+    IN p_password_hash VARCHAR(255),
+    IN p_initial_deposit DECIMAL(15,2),
+    OUT p_customer_id VARCHAR(30),
+    OUT p_account_number VARCHAR(30),
+    OUT p_result VARCHAR(30),
+    OUT p_message VARCHAR(255)
+)
+BEGIN
+    DECLARE v_lock_acquired INT DEFAULT 0;
+    DECLARE v_max_cust_num INT DEFAULT 0;
+    DECLARE v_next_cust_num INT DEFAULT 0;
+    DECLARE v_max_acc_num INT DEFAULT 0;
+    DECLARE v_next_acc_num INT DEFAULT 0;
+    DECLARE v_existing_count INT DEFAULT 0;
+    DECLARE v_new_account_id BIGINT DEFAULT NULL;
+    DECLARE v_dep_txn_id BIGINT DEFAULT NULL;
+    DECLARE v_dep_result VARCHAR(25) DEFAULT NULL;
+    DECLARE v_dep_message VARCHAR(255) DEFAULT NULL;
+    DECLARE v_dup_key TINYINT DEFAULT 0;
+
+    DECLARE CONTINUE HANDLER FOR 1062
+    BEGIN
+        SET v_dup_key = 1;
+    END;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        IF v_lock_acquired = 1 THEN
+            DO RELEASE_LOCK('register_customer');
+        END IF;
+        RESIGNAL;
+    END;
+
+    SET p_customer_id = NULL;
+    SET p_account_number = NULL;
+    SET p_result = 'FAILED';
+
+    -- Basic business validations
+    IF p_full_name IS NULL OR TRIM(p_full_name) = '' THEN
+        SET p_message = 'Full name is required.';
+    ELSEIF p_email IS NULL OR TRIM(p_email) = '' THEN
+        SET p_message = 'Email is required.';
+    ELSEIF p_password_hash IS NULL OR TRIM(p_password_hash) = '' THEN
+        SET p_message = 'Password is required.';
+    ELSEIF p_account_type NOT IN ('SAVINGS', 'CURRENT', 'SALARY') THEN
+        SET p_message = 'Invalid account type. Choose SAVINGS, CURRENT, or SALARY.';
+    ELSEIF p_date_of_birth IS NULL THEN
+        SET p_message = 'Date of birth is required.';
+    ELSEIF p_date_of_birth > CURDATE() THEN
+        SET p_message = 'Date of birth cannot be in the future.';
+    ELSEIF p_date_of_birth > CURDATE() - INTERVAL 18 YEAR THEN
+        SET p_message = 'Applicant must be at least 18 years old.';
+    ELSEIF p_initial_deposit IS NOT NULL AND p_initial_deposit < 0 THEN
+        SET p_message = 'Initial deposit cannot be negative.';
+    ELSE
+        -- Acquire serialized lock (5 second timeout)
+        SELECT GET_LOCK('register_customer', 5) INTO v_lock_acquired;
+        IF v_lock_acquired <> 1 THEN
+            SET p_message = 'Could not acquire registration lock. Please try again.';
+        ELSE
+            -- Check for duplicate email
+            SELECT COUNT(*) INTO v_existing_count
+            FROM CUSTOMER_ACCOUNT
+            WHERE LOWER(email) = LOWER(TRIM(p_email));
+
+            IF v_existing_count > 0 THEN
+                SET p_message = 'An account with this email already exists.';
+                DO RELEASE_LOCK('register_customer');
+                SET v_lock_acquired = 0;
+            ELSE
+                -- Check for duplicate phone if provided
+                IF p_phone IS NOT NULL AND TRIM(p_phone) <> '' THEN
+                    SELECT COUNT(*) INTO v_existing_count
+                    FROM CUSTOMER_ACCOUNT
+                    WHERE phone = TRIM(p_phone);
+                ELSE
+                    SET v_existing_count = 0;
+                END IF;
+
+                IF v_existing_count > 0 THEN
+                    SET p_message = 'An account with this phone number already exists.';
+                    DO RELEASE_LOCK('register_customer');
+                    SET v_lock_acquired = 0;
+                ELSE
+                    -- Generate sequential Customer ID like CUST011
+                    SELECT IFNULL(MAX(CAST(SUBSTRING(customer_id, 5) AS UNSIGNED)), 0)
+                    INTO v_max_cust_num
+                    FROM CUSTOMER_ACCOUNT
+                    WHERE customer_id REGEXP '^CUST[0-9]+$';
+
+                    SET v_next_cust_num = v_max_cust_num + 1;
+                    SET p_customer_id = CONCAT('CUST', LPAD(v_next_cust_num, 3, '0'));
+
+                    -- Generate sequential Account Number like ACC1012
+                    SELECT IFNULL(MAX(CAST(SUBSTRING(account_number, 4) AS UNSIGNED)), 0)
+                    INTO v_max_acc_num
+                    FROM CUSTOMER_ACCOUNT
+                    WHERE account_number REGEXP '^ACC[0-9]+$';
+
+                    SET v_next_acc_num = v_max_acc_num + 1;
+                    SET p_account_number = CONCAT('ACC', v_next_acc_num);
+
+                    -- Wrap in transaction
+                    START TRANSACTION;
+                    SET v_dup_key = 0;
+
+                    INSERT INTO CUSTOMER_ACCOUNT (
+                        customer_id, full_name, date_of_birth, email, phone, address,
+                        password_hash, account_number, account_type, balance, account_status,
+                        opened_at, holder_role, start_date
+                    ) VALUES (
+                        p_customer_id, TRIM(p_full_name), p_date_of_birth, TRIM(p_email),
+                        NULLIF(TRIM(p_phone), ''), NULLIF(TRIM(p_address), ''),
+                        p_password_hash, p_account_number, p_account_type, 0.00, 'ACTIVE',
+                        NOW(), 'PRIMARY', CURDATE()
+                    );
+
+                    IF v_dup_key = 1 THEN
+                        ROLLBACK;
+                        DO RELEASE_LOCK('register_customer');
+                        SET v_lock_acquired = 0;
+                        SET p_customer_id = NULL;
+                        SET p_account_number = NULL;
+                        SET p_result = 'FAILED';
+                        SET p_message = 'Duplicate account number generated. Please retry.';
+                    ELSE
+                        SET v_new_account_id = LAST_INSERT_ID();
+                        COMMIT;
+                        DO RELEASE_LOCK('register_customer');
+                        SET v_lock_acquired = 0;
+
+                        SET p_result = 'CREATED';
+                        SET p_message = 'Account created successfully.';
+
+                        -- Process initial deposit if provided
+                        IF p_initial_deposit IS NOT NULL AND p_initial_deposit > 0 THEN
+                            CALL sp_make_transaction(
+                                'DEPOSIT',
+                                NULL,
+                                v_new_account_id,
+                                p_initial_deposit,
+                                v_dep_txn_id,
+                                v_dep_result,
+                                v_dep_message
+                            );
+                            IF v_dep_result = 'FAILED' THEN
+                                SET p_message = CONCAT('Account created, but initial deposit failed: ', v_dep_message);
+                            END IF;
+                        END IF;
+                    END IF;
+                END IF;
+            END IF;
         END IF;
     END IF;
 END//
